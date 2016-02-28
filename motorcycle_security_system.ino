@@ -6,7 +6,7 @@ GSM gsmAccess;
 GSM_SMS sms;
 String defaultPin = "3421";
 String promoNumber;
-String adminNumber = "09472837607";
+String adminNumber = "+639472837607";
 char senderNumber[20];
 int lockUnlockPin = 4;
 
@@ -84,12 +84,23 @@ void parseMessage(String textMessage){
       }else if (command == "ulock"){
         unlockMotorcycle();
       }else if (command == "chpin"){
-        defaultPin = textMessage.substring(9,13);
-        sendMessage("info", "PIN changed.", senderNumber);
-      }else if (command == "adnch"){         
-        adminNumber = textMessage.substring(9);
-        sendMessage("info", "Admin number changed.", senderNumber);
-        sendMessage("info", "You're the new Admin.", adminNumber);
+        char adminNumberVal[20];
+        adminNumber.toCharArray(adminNumberVal, 20);
+        if (senderNumber == adminNumberVal){
+          defaultPin = textMessage.substring(9,13);
+          sendMessage("info", "PIN changed.", senderNumber);
+        }else{
+          sendMessage("info", "You're not authorize.", senderNumber);
+        }
+      }else if (command == "adnch"){
+        char adminNumberVal[20];
+        adminNumber.toCharArray(adminNumberVal, 20);
+        if (senderNumber == adminNumberVal){          
+          sendMessage("info", "Admin number changed.", senderNumber);
+          sendMessage("info", "You're the new Admin.", adminNumber);
+        }else{
+          sendMessage("info", "You're not authorize.", senderNumber);
+        }
       }else if (command == "prreg"){
         String promoNumber = textMessage.substring(9,13);
         String promoRegText = textMessage.substring(13);      
