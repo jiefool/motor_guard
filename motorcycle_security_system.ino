@@ -14,7 +14,7 @@ void setup() {
   pinMode(lockUnlockPin, OUTPUT);
   Serial.begin(9600);
   Serial.println("initializing GSM...");
-  //acheckGSM();
+  checkGSM();
   Serial.println("GSM initialized.");
   Serial.println("Waiting for messages...");
   
@@ -72,32 +72,34 @@ void getSenderNumber(){
 
 void parseMessage(String textMessage){
   String command;
-  String pin;  
-  command = textMessage.substring(0,5);
-  pin = textMessage.substring(5,9);
-  Serial.println("Command: "+command);
-  Serial.println("PIN: "+pin);
-  if (pin == defaultPin){
-    if (command == "olock"){      
-      lockMotorcycle();
-    }else if (command == "ulock"){
-      unlockMotorcycle();
-    }else if (command == "chpin"){
-      defaultPin = textMessage.substring(9,13);
-      sendMessage("info", "PIN changed.", senderNumber);
-    }else if (command == "adnch"){         
-      adminNumber = textMessage.substring(9);
-      sendMessage("info", "Admin number changed.", senderNumber);
-      sendMessage("info", "You're the new Admin.", adminNumber);
-    }else if (command == "prreg"){
-      String promoNumber = textMessage.substring(9,13);
-      String promoRegText = textMessage.substring(13);      
-      sendMessage("action", promoRegText, promoNumber);
-    }else{
-      sendMessage("info","Command not found.", senderNumber);
-    }    
-  }else{     
-     sendMessage("info", "Invalid PIN.", senderNumber);
+  String pin; 
+  if (textMessage.length()<=20){ 
+    command = textMessage.substring(0,5);
+    pin = textMessage.substring(5,9);
+    Serial.println("Command: "+command);
+    Serial.println("PIN: "+pin);
+    if (pin == defaultPin){
+      if (command == "olock"){      
+        lockMotorcycle();
+      }else if (command == "ulock"){
+        unlockMotorcycle();
+      }else if (command == "chpin"){
+        defaultPin = textMessage.substring(9,13);
+        sendMessage("info", "PIN changed.", senderNumber);
+      }else if (command == "adnch"){         
+        adminNumber = textMessage.substring(9);
+        sendMessage("info", "Admin number changed.", senderNumber);
+        sendMessage("info", "You're the new Admin.", adminNumber);
+      }else if (command == "prreg"){
+        String promoNumber = textMessage.substring(9,13);
+        String promoRegText = textMessage.substring(13);      
+        sendMessage("action", promoRegText, promoNumber);
+      }else{
+        sendMessage("info","Command not found.", senderNumber);
+      }    
+    }else{     
+       sendMessage("info", "Invalid PIN.", senderNumber);
+    }
   }
 }
 
@@ -125,8 +127,10 @@ void sendMessage(String type, String message, String recipient){
   Serial.println("Message: "+textToSend);
   Serial.println("Sent to: "+recipient);
   
-//  sms.beginSMS(recipient);
-//  sms.print(textToSend);
-//  sms.endSMS(); 
+  char recipientChar[20];
+  recipient.toCharArray(recipientChar, 20);
+  sms.beginSMS(recipientChar);
+  sms.print(textToSend);
+  sms.endSMS(); 
   
 }
