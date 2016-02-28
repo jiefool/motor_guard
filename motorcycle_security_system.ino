@@ -1,6 +1,7 @@
 #include <GSM.h>
 #define PINNUMBER ""
-
+#define irSensor A0
+#define NB_SAMPLE 25
 
 GSM gsmAccess;
 GSM_SMS sms;
@@ -9,8 +10,10 @@ String promoNumber;
 String adminNumber = "+639472837607";
 char senderNumber[20];
 int lockUnlockPin = 4;
+int irDetectCount = 0;
 
 void setup() {  
+  pinMode(irSensor, INPUT);    
   pinMode(lockUnlockPin, OUTPUT);
   Serial.begin(9600);
   Serial.println("initializing GSM...");
@@ -19,6 +22,7 @@ void setup() {
   Serial.println("Waiting for messages...");
   
 }
+
 
 void loop() {  
   if (sms.available()) {    
@@ -34,6 +38,20 @@ void loop() {
     String serialInput = Serial.readString();
     parseMessage(serialInput);
   }
+  
+  if (checkIrSensor()){
+    irDetectCount++;
+  }else{
+    irDetectCount = 0;
+  }
+  
+  if (irDetectCount == 5){
+    Serial.println("Motorbike is being lifted.");
+    sendMessage("info", "Motorbike is being lifted.", adminNumber);
+    lockMotorcycle();
+  }
+  
+  Serial.println(irDetectCount);
   delay(1000);
 }
 
@@ -73,7 +91,7 @@ void getSenderNumber(){
 void parseMessage(String textMessage){
   String command;
   String pin; 
-  if (textMessage.length()<=20){ 
+  if (textMessage.length()<=22){ 
     command = textMessage.substring(0,5);
     pin = textMessage.substring(5,9);
     Serial.println("Command: "+command);
@@ -84,22 +102,21 @@ void parseMessage(String textMessage){
       }else if (command == "ulock"){
         unlockMotorcycle();
       }else if (command == "chpin"){
-        char adminNumberVal[20];
-        adminNumber.toCharArray(adminNumberVal, 20);
-        if (senderNumber == adminNumberVal){
+        String senderNumberVal(senderNumber);               
+        if (senderNumberVal == adminNumber){
           defaultPin = textMessage.substring(9,13);
           sendMessage("info", "PIN changed.", senderNumber);
         }else{
-          sendMessage("info", "You're not authorize.", senderNumber);
+          sendMessage("info", "You're not authorized.", senderNumber);
         }
       }else if (command == "adnch"){
-        char adminNumberVal[20];
-        adminNumber.toCharArray(adminNumberVal, 20);
-        if (senderNumber == adminNumberVal){          
+        String senderNumberVal(senderNumber);        
+        if (senderNumberVal == adminNumber){       
+          adminNumber = textMessage.substring(9);   
           sendMessage("info", "Admin number changed.", senderNumber);
           sendMessage("info", "You're the new Admin.", adminNumber);
         }else{
-          sendMessage("info", "You're not authorize.", senderNumber);
+          sendMessage("info", "You're not authorized.", senderNumber);
         }
       }else if (command == "prreg"){
         String promoNumber = textMessage.substring(9,13);
@@ -142,6 +159,22 @@ void sendMessage(String type, String message, String recipient){
   recipient.toCharArray(recipientChar, 20);
   sms.beginSMS(recipientChar);
   sms.print(textToSend);
-  sms.endSMS(); 
-  
+  sms.endSMS();   
+}
+
+int checkIrSensor(){
+ int sum=0;
+ for(int i=0; i<100;i++){
+   int sensor=analogRead(irSensor);
+   int dist= 3027.4/sensor;
+   int distance= pow(dist,1.2134);
+   sum=sum+distance;
+ }
+ 
+ int distance_cm=sum/100; 
+ if(distance_cm >=45){
+   return true;
+ }else{
+   return false;
+ }  
 }
