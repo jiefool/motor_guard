@@ -10,9 +10,14 @@ String promoNumber;
 String adminNumber = "+639472837607";
 char senderNumber[20];
 int lockUnlockPin = 4;
+int pressSensorPin = 5;
+int buzzerOutputPin = A1;
+int tiltInputPin = 7;
 int irDetectCount = 0;
 
-void setup() {  
+void setup() {
+  pinMode(tiltInputPin, INPUT);
+  pinMode(pressSensorPin, INPUT);  
   pinMode(irSensor, INPUT);    
   pinMode(lockUnlockPin, OUTPUT);
   Serial.begin(9600);
@@ -25,6 +30,8 @@ void setup() {
 
 
 void loop() {  
+  
+  //sms detection  
   if (sms.available()) {    
     getSenderNumber();
     disposeOldMessage();
@@ -34,11 +41,13 @@ void loop() {
     sms.flush();   
   }
   
+  //serial input detection
   if (Serial.available()>0){
     String serialInput = Serial.readString();
     parseMessage(serialInput);
   }
   
+  //IR sensor detection
   if (checkIrSensor()){
     irDetectCount++;
   }else{
@@ -52,7 +61,35 @@ void loop() {
   }
   
   Serial.println(irDetectCount);
-  delay(1000);
+  
+  
+  //press sensor detection
+  if (digitalRead(pressSensorPin) == 1){
+    Serial.println("Press sensor triggered.");
+    sendMessage("info", "Press sensor is triggered.", adminNumber);
+    lockMotorcycle();
+    ringBuzzer();
+  }
+  
+  
+  //tilt sensor detection
+  if (digitalRead(tiltInputPin) == 0){
+    Serial.println("Tilt sensor triggered.");
+    sendMessage("info", "Tilt sensor triggered.", adminNumber);
+    lockMotorcycle();
+    ringBuzzer();    
+  }  
+  
+  delay(500);
+}
+
+void ringBuzzer(){
+  for(int i=0;i<=10;i++){
+    analogWrite(buzzerOutputPin, 0);
+    delay(500);
+    analogWrite(buzzerOutputPin, 255);
+    delay(500);
+  }
 }
 
 void disposeOldMessage(){
