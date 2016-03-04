@@ -12,10 +12,10 @@ char senderNumber[20];
 int lockUnlockPin = 4;
 int pressSensorPin = 5;
 int buzzerOutputPin = A1;
-int tiltInputPin = 7;
+int tiltInputPin = A2;
 int irDetectCount = 0;
 
-void setup() {
+void setup() {  
   pinMode(tiltInputPin, INPUT);
   pinMode(pressSensorPin, INPUT);  
   pinMode(irSensor, INPUT);    
@@ -28,7 +28,8 @@ void setup() {
   
 }
 
-
+int tiltValue = 0;
+int tiltFinalValue = 0;
 void loop() {  
   
   //sms detection  
@@ -55,39 +56,37 @@ void loop() {
   }
   
   if (irDetectCount == 5){
-    Serial.println("Motorbike is being lifted.");
-    sendMessage("info", "Motorbike is being lifted.", adminNumber);
-    lockMotorcycle();
+    Serial.println("IR sensor triggered.");
+    sendMessage("info", "IR sensor triggered.", adminNumber);
+    ringBuzzer(); 
+    irDetectCount = 0; 
   }
   
   Serial.println(irDetectCount);
   
-  
   //press sensor detection
   if (digitalRead(pressSensorPin) == 1){
     Serial.println("Press sensor triggered.");
-    sendMessage("info", "Press sensor is triggered.", adminNumber);
-    lockMotorcycle();
-    ringBuzzer();
-  }
-  
+    sendMessage("info", "Press sensor is triggered.", adminNumber);    
+    ringBuzzer();  
+  } 
   
   //tilt sensor detection
-  if (digitalRead(tiltInputPin) == 0){
-    Serial.println("Tilt sensor triggered.");
+  tiltValue = analogRead(tiltInputPin);
+  tiltFinalValue = map(tiltValue, 0, 10, 0, 255);
+
+  if (tiltFinalValue > 26000 ){
+    Serial.println("Tilt sensor triggered.");    
     sendMessage("info", "Tilt sensor triggered.", adminNumber);
-    lockMotorcycle();
     ringBuzzer();    
-  }  
-  
-  delay(500);
+  }      
 }
 
 void ringBuzzer(){
   for(int i=0;i<=10;i++){
-    analogWrite(buzzerOutputPin, 0);
-    delay(500);
     analogWrite(buzzerOutputPin, 255);
+    delay(500);
+    analogWrite(buzzerOutputPin, 0);
     delay(500);
   }
 }
@@ -138,6 +137,9 @@ void parseMessage(String textMessage){
         lockMotorcycle();
       }else if (command == "ulock"){
         unlockMotorcycle();
+      }else if (command == "alarm"){
+        sendMessage("info", "Buzzer ringed.", adminNumber);
+        ringBuzzer();
       }else if (command == "chpin"){
         String senderNumberVal(senderNumber);               
         if (senderNumberVal == adminNumber){
@@ -201,14 +203,14 @@ void sendMessage(String type, String message, String recipient){
 
 int checkIrSensor(){
  int sum=0;
- for(int i=0; i<100;i++){
+ for(int i=0; i<10;i++){
    int sensor=analogRead(irSensor);
    int dist= 3027.4/sensor;
    int distance= pow(dist,1.2134);
    sum=sum+distance;
  }
  
- int distance_cm=sum/100; 
+ int distance_cm=sum/10;  
  if(distance_cm >=45){
    return true;
  }else{
